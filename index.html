@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mestara Mentorship Matchmaker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load PapaParse for CSV processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Load Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        mestara: {
+                            light: '#e6f4ea', // Soft green background
+                            DEFAULT: '#1a73e8', // Using a calming teal/emerald vibe instead of harsh green
+                            primary: '#0d9488', // Teal-600
+                            dark: '#0f766e', // Teal-700
+                            accent: '#14b8a6', // Teal-500
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-mestara-primary flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                    M
+                </div>
+                <h1 class="text-xl font-semibold text-gray-900 tracking-tight">Mestara <span class="text-mestara-primary font-medium">Matchmaker</span></h1>
+            </div>
+            <nav class="text-sm font-medium text-gray-500">
+                Admin Portal v1.0
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Intro & Action Area -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 text-center relative overflow-hidden">
+            <!-- Decorative background element -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-mestara-accent to-mestara-primary"></div>
+            
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Automated Mentorship Matching</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto mb-6">
+                Sistem akan menganalisis preferensi Mentee dan keahlian Mentor berdasarkan Industri, Peran/Fungsi Kerja, dan Tujuan Pembelajaran untuk merekomendasikan pasangan yang paling tepat.
+            </p>
+            
+            <button id="runMatchBtn" onclick="startMatchmaking()" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-mestara-primary hover:bg-mestara-dark shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mestara-primary">
+                <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Jalankan Algoritma Matching
+            </button>
+
+            <!-- Loading Spinner (Hidden by default) -->
+            <div id="loadingState" class="hidden mt-4 flex flex-col items-center justify-center text-mestara-primary">
+                <svg class="animate-spin h-8 w-8 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm font-medium">Memproses ribuan titik data...</span>
+            </div>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-xl border-2 border-dashed border-gray-200 hover:border-mestara-primary transition-colors shadow-sm">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Unggah Data Mentee (CSV)</label>
+                <p class="text-xs text-gray-500 mb-3">Kolom header wajib: <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-600">name, goal, roleInterest, industryInterest</code></p>
+                <input type="file" accept=".csv" onchange="handleFileUpload(event, 'mentee')" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-mestara-light file:text-mestara-dark hover:file:bg-green-100 cursor-pointer focus:outline-none">
+            </div>
+            <div class="bg-white p-5 rounded-xl border-2 border-dashed border-gray-200 hover:border-mestara-primary transition-colors shadow-sm">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Unggah Data Mentor (CSV)</label>
+                <p class="text-xs text-gray-500 mb-3">Kolom header wajib: <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-600">name, jobTitle, workplace, industry, function, menteePreference</code></p>
+                <input type="file" accept=".csv" onchange="handleFileUpload(event, 'mentor')" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-mestara-light file:text-mestara-dark hover:file:bg-green-100 cursor-pointer focus:outline-none">
+            </div>
+        </div>
+
+        <!-- Data Preview Section (Visible initially) -->
+        <div id="dataPreviewSection" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Mentees Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
+                        Data Mentee <span class="ml-2 text-xs bg-white px-2 py-1 rounded-md border text-gray-500" id="menteeCount">0</span>
+                    </h3>
+                </div>
+                <div class="p-0 overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-white sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama & Goal</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minat Profesi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menteeTableBody" class="bg-white divide-y divide-gray-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mentors Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-mestara-primary mr-2"></span>
+                        Data Mentor <span class="ml-2 text-xs bg-white px-2 py-1 rounded-md border text-gray-500" id="mentorCount">0</span>
+                    </h3>
+                </div>
+                <div class="p-0 overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-white sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profil Mentor</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keahlian & Preferensi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mentorTableBody" class="bg-white divide-y divide-gray-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section (Hidden initially) -->
+        <div id="resultsSection" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Hasil Rekomendasi Mentor</h2>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportToCSV()" class="inline-flex items-center px-4 py-2 bg-white border border-mestara-primary text-mestara-primary font-medium rounded-lg text-sm hover:bg-mestara-light transition-colors shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Unduh Hasil (CSV)
+                    </button>
+                    <button onclick="resetView()" class="text-sm text-gray-500 hover:text-mestara-primary font-medium transition-colors">
+                        ← Kembali
+                    </button>
+                </div>
+            </div>
+            
+            <div id="resultsContainer" class="space-y-8">
+                <!-- Match cards populated by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center">
+            <p class="text-sm text-gray-500">
+                &copy; 2026 Mestara NGO. All rights reserved.
+            </p>
+            <p class="text-sm text-gray-400 mt-2 md:mt-0 flex items-center">
+                Built for women empowerment <span class="text-red-400 ml-1">♥</span>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        // --- State Management ---
+        let latestMatches = [];
+
+        // --- Mock Data (Digunakan sebagai data awal jika belum ada file yang diunggah) ---
+        let mentees = [
+            { id: 'm1', name: 'Nadia Saphira', goal: 'Transisi Karier ke Tech', roleInterest: 'Product Manager', industryInterest: 'Technology' },
+            { id: 'm2', name: 'Rina Wijaya', goal: 'Leadership & Negosiasi', roleInterest: 'Marketing Director', industryInterest: 'FMCG' },
+            { id: 'm3', name: 'Alya Putri', goal: 'Membangun Startup', roleInterest: 'Founder/CEO', industryInterest: 'E-commerce' },
+            { id: 'm4', name: 'Dewi Lestari', goal: 'Work-life balance as a Mom', roleInterest: 'Data Analyst', industryInterest: 'Finance' },
+            { id: 'm5', name: 'Sarah Amanda', goal: 'Kembali bekerja setelah jeda', roleInterest: 'HR Specialist', industryInterest: 'Consulting' }
+        ];
+
+        let mentors = [
+            { id: 't1', name: 'Kartika Sari', jobTitle: 'VP of Product', workplace: 'Gojek', industry: 'Technology', function: 'Product Manager', menteePreference: 'Transisi Karier, Women in Tech' },
+            { id: 't2', name: 'Maya Nabila', jobTitle: 'Chief Marketing Officer', workplace: 'Unilever', industry: 'FMCG', function: 'Marketing', menteePreference: 'Leadership, Negosiasi Gaji' },
+            { id: 't3', name: 'Diana Rahmat', jobTitle: 'Co-Founder', workplace: 'Tokopedia', industry: 'E-commerce', function: 'Founder/CEO', menteePreference: 'Membangun Startup, Fundraising' },
+            { id: 't4', name: 'Fitri Handayani', jobTitle: 'Head of Data', workplace: 'Bank Mandiri', industry: 'Finance', function: 'Data Analyst', menteePreference: 'Tech skills, Work-life balance' },
+            { id: 't5', name: 'Lia Kusuma', jobTitle: 'Senior HR Partner', workplace: 'McKinsey', industry: 'Consulting', function: 'HR', menteePreference: 'Kembali bekerja, Persiapan Wawancara' },
+            { id: 't6', name: 'Anita Widjaja', jobTitle: 'Product Owner', workplace: 'Traveloka', industry: 'Technology', function: 'Product Manager', menteePreference: 'Scrum, Agile, Transisi Karier' },
+            { id: 't7', name: 'Sisca Kohl', jobTitle: 'Brand Manager', workplace: 'Nestle', industry: 'FMCG', function: 'Marketing Director', menteePreference: 'Brand building, Leadership' }
+        ];
+
+        // --- File Upload Logic (CSV Processing) ---
+        function handleFileUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true, // Asumsikan baris pertama CSV adalah nama kolom
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        if (type === 'mentee') {
+                            mentees = results.data;
+                        } else if (type === 'mentor') {
+                            mentors = results.data;
+                        }
+                        // Refresh tabel data setelah data baru dimasukkan
+                        renderDataTables();
+                    } else {
+                        console.error("Data CSV kosong atau gagal dibaca.");
+                    }
+                },
+                error: function(error) {
+                    console.error("Error parsing CSV:", error);
+                }
+            });
+        }
+
+        // --- Initial Render ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderDataTables();
+        });
+
+        function renderDataTables() {
+            document.getElementById('menteeCount').textContent = mentees.length;
+            document.getElementById('mentorCount').textContent = mentors.length;
+
+            const menteeBody = document.getElementById('menteeTableBody');
+            menteeBody.innerHTML = mentees.map(m => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs mr-3">
+                                ${m.name.charAt(0)}
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">${m.name}</div>
+                                <div class="text-xs text-gray-500">${m.goal}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${m.roleInterest}</div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                            ${m.industryInterest}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+
+            const mentorBody = document.getElementById('mentorTableBody');
+            mentorBody.innerHTML = mentors.map(m => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-mestara-light text-mestara-dark flex items-center justify-center font-bold text-xs mr-3">
+                                ${m.name.charAt(0)}
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">${m.name}</div>
+                                <div class="text-xs text-gray-500">${m.jobTitle} di ${m.workplace}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-normal">
+                        <div class="text-sm text-gray-900">${m.function} <span class="text-gray-400">|</span> ${m.industry}</div>
+                        <div class="text-xs text-gray-500 mt-1 italic w-48 truncate" title="${m.menteePreference}">Pref: ${m.menteePreference}</div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Matchmaking Logic ---
+        function startMatchmaking() {
+            const btn = document.getElementById('runMatchBtn');
+            const loader = document.getElementById('loadingState');
+            const preview = document.getElementById('dataPreviewSection');
+            const results = document.getElementById('resultsSection');
+
+            // UI State change
+            btn.classList.add('hidden');
+            loader.classList.remove('hidden');
+            preview.classList.add('opacity-50', 'pointer-events-none');
+
+            // Simulate processing time
+            setTimeout(() => {
+                const matches = calculateMatches();
+                latestMatches = matches; // Simpan hasil akhir ke variabel state
+                renderResults(matches);
+                
+                loader.classList.add('hidden');
+                preview.classList.add('hidden');
+                preview.classList.remove('opacity-50', 'pointer-events-none');
+                results.classList.remove('hidden');
+                results.classList.add('fade-in');
+            }, 1500); // 1.5s simulated delay
+        }
+
+        function calculateMatches() {
+            const results = [];
+
+            mentees.forEach(mentee => {
+                let menteeMatches = [];
+
+                mentors.forEach(mentor => {
+                    let score = 0;
+                    let matchReasons = [];
+
+                    // 1. Industry Match (High Weight)
+                    if (mentee.industryInterest === mentor.industry) {
+                        score += 45;
+                        matchReasons.push('Industri');
+                    }
+
+                    // 2. Role/Function Match (High Weight)
+                    if (mentee.roleInterest === mentor.function || mentor.function.includes(mentee.roleInterest.split(' ')[0])) {
+                        score += 35;
+                        matchReasons.push('Peran Profesi');
+                    }
+
+                    // 3. Goal / Keyword overlap simulation (Medium Weight)
+                    // Very simplified mock keyword matching
+                    const goalKeywords = mentee.goal.toLowerCase().split(' ');
+                    const prefKeywords = mentor.menteePreference.toLowerCase();
+                    let goalMatched = false;
+                    
+                    for(let word of goalKeywords) {
+                        if(word.length > 3 && prefKeywords.includes(word)) {
+                            score += 15;
+                            goalMatched = true;
+                            break; 
+                        }
+                    }
+                    if(goalMatched) matchReasons.push('Tujuan/Fokus');
+
+                    // Base score to ensure everyone gets somewhat of a match
+                    score += Math.floor(Math.random() * 10) + 10; 
+                    
+                    // Cap at 99% for realism (nobody is 100% perfect)
+                    if (score > 98) score = 98;
+                    // Minimum threshold so it doesn't look terrible
+                    if (score < 45) score = 45 + Math.floor(Math.random() * 15);
+
+                    let reasonText = matchReasons.length > 0 
+                        ? `Kecocokan kuat pada: ${matchReasons.join(', ')}`
+                        : 'Cocok untuk diskusi karier umum';
+
+                    menteeMatches.push({
+                        mentor: mentor,
+                        score: score,
+                        reason: reasonText
+                    });
+                });
+
+                // Sort by score descending and take top 3
+                menteeMatches.sort((a, b) => b.score - a.score);
+                results.push({
+                    mentee: mentee,
+                    topMentors: menteeMatches.slice(0, 3)
+                });
+            });
+
+            return results;
+        }
+
+        function renderResults(matchData) {
+            const container = document.getElementById('resultsContainer');
+            
+            let html = '';
+            matchData.forEach(data => {
+                const { mentee, topMentors } = data;
+                
+                let mentorCardsHtml = topMentors.map((match, index) => {
+                    // Determine color based on score
+                    let scoreColorClass = 'text-green-600 bg-green-50 border-green-200';
+                    let iconColorClass = 'bg-mestara-primary';
+                    if (match.score < 70) {
+                        scoreColorClass = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                        iconColorClass = 'bg-yellow-500';
+                    }
+
+                    return `
+                        <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col shadow-sm hover:shadow-md transition-shadow relative">
+                            <!-- Badge Top Right -->
+                            <div class="absolute top-4 right-4 ${scoreColorClass} border px-2 py-1 rounded-full text-xs font-bold flex items-center">
+                                ${match.score}% Match
+                            </div>
+                            
+                            <div class="flex items-center mb-4 mt-2">
+                                <div class="h-12 w-12 rounded-full ${iconColorClass} text-white flex items-center justify-center font-bold text-lg mr-4 shadow-sm">
+                                    ${match.mentor.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 text-lg leading-tight">${match.mentor.name}</h4>
+                                    <p class="text-sm text-gray-500">${match.mentor.jobTitle} at <span class="font-medium text-gray-700">${match.mentor.workplace}</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                <div class="flex items-start">
+                                    <svg class="w-4 h-4 text-mestara-accent mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    <p class="text-xs text-gray-600 font-medium">${match.reason}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                html += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <!-- Mentee Header -->
+                        <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">${mentee.name}</h3>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Mencari bimbingan untuk <span class="font-semibold text-mestara-dark">"${mentee.goal}"</span>
+                                </p>
+                            </div>
+                            <div class="mt-2 md:mt-0 flex gap-2">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                    ${mentee.roleInterest}
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                                    ${mentee.industryInterest}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Recommended Mentors Grid -->
+                        <div class="p-6">
+                            <p class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wider">Top 3 Rekomendasi Mentor</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                ${mentorCardsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function resetView() {
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('dataPreviewSection').classList.remove('hidden');
+            document.getElementById('runMatchBtn').classList.remove('hidden');
+        }
+
+        // --- Export Logic ---
+        function exportToCSV() {
+            if (!latestMatches || latestMatches.length === 0) {
+                console.error("Tidak ada data untuk diekspor");
+                return;
+            }
+
+            const csvData = [];
+            
+            // Format ulang data JSON menjadi baris/kolom untuk file Excel/CSV
+            latestMatches.forEach(match => {
+                const row = {
+                    'Nama Mentee': match.mentee.name || '',
+                    'Tujuan (Goal)': match.mentee.goal || '',
+                    'Minat Profesi': match.mentee.roleInterest || '',
+                    'Minat Industri': match.mentee.industryInterest || ''
+                };
+
+                // Memasukkan hasil rekomendasi Top 1, Top 2, dst ke dalam kolom sebelahnya
+                match.topMentors.forEach((m, index) => {
+                    row[`Rekomendasi ${index + 1} Nama`] = m.mentor.name;
+                    row[`Rekomendasi ${index + 1} Perusahaan`] = m.mentor.workplace;
+                    row[`Rekomendasi ${index + 1} Skor Match (%)`] = m.score;
+                    row[`Rekomendasi ${index + 1} Alasan`] = m.reason;
+                });
+                
+                csvData.push(row);
+            });
+
+            // Konversi kembali dari JSON ke format CSV
+            const csv = Papa.unparse(csvData);
+            
+            // Proses memicu unduhan di browser
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Hasil_Matchmaking_Mestara.csv");
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click(); // Memicu klik untuk memulai unduhan
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
